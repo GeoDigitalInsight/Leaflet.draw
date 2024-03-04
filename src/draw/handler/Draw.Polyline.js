@@ -100,11 +100,9 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 				.on('mouseout', this._onMouseOut, this)
 				.on('mousemove', this._onMouseMove, this) // Necessary to prevent 0.8 stutter
 				.on('mousedown', this._onMouseDown, this)
-				.on('mouseup', this._onMouseUp, this) // Necessary for 0.8 compatibility
 				.addTo(this._map);
 
 			this._map
-				.on('mouseup', this._onMouseUp, this) // Necessary for 0.7 compatibility
 				.on('mousemove', this._onMouseMove, this)
 				.on('zoomlevelschange', this._onZoomEnd, this)
 				.on('touchstart', this._onTouch, this)
@@ -228,6 +226,10 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 	},
 
+	_lastPointClick: function(e) {
+		if (!this._disableMarkers) this._finishShape();
+	},
+
 	// Called to verify the shape is valid when the user tries to finish it
 	// Return false if the shape is not valid
 	_shapeIsValid: function () {
@@ -272,6 +274,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_onMouseDown: function (e) {
 		if (!this._clickHandled && !this._touchHandled && !this._disableMarkers) {
+			e.target.on('mouseup', this._onMouseUp, this);
 			this._onMouseMove(e);
 			this._clickHandled = true;
 			this._disableNewMarkers();
@@ -292,6 +295,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var clientY = originalEvent.clientY;
 		this._endPoint.call(this, clientX, clientY, e);
 		this._clickHandled = null;
+		e.target.off('mouseup', this._onMouseUp, this);
 	},
 
 	_endPoint: function (clientX, clientY, e) {
@@ -368,12 +372,12 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var markerCount = this._markers.length;
 		// The last marker should have a click handler to close the polyline
 		if (markerCount > 1) {
-			this._markers[markerCount - 1].on('click', this._finishShape, this);
+			this._markers[markerCount - 1].on('click', this._lastPointClick, this);
 		}
 
 		// Remove the old marker click handler (as only the last point should close the polyline)
 		if (markerCount > 2) {
-			this._markers[markerCount - 2].off('click', this._finishShape, this);
+			this._markers[markerCount - 2].off('click', this._lastPointClick, this);
 		}
 	},
 
@@ -576,12 +580,12 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	_enableNewMarkers: function () {
 		setTimeout(function () {
 			this._disableMarkers = false;
-		}.bind(this), 50);
+		}.bind(this), 250);
 	},
 
 	_cleanUpShape: function () {
 		if (this._markers.length > 1) {
-			this._markers[this._markers.length - 1].off('click', this._finishShape, this);
+			this._markers[this._markers.length - 1].off('click', this._lastPointClick, this);
 		}
 	},
 
