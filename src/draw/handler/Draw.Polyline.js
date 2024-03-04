@@ -303,11 +303,16 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			var dragCheckDistance = L.point(clientX, clientY)
 				.distanceTo(this._mouseDownOrigin);
 			var lastPtDistance = this._calculateFinishDistance(e.latlng);
-			if (this.options.maxPoints > 1 && this.options.maxPoints == this._markers.length + 1) {
+			if (lastPtDistance < 10 && this._touchHandled) {
+				this._finishShape();
+			} else if (this.options.maxPoints > 1 && this.options.maxPoints <= this._markers.length + 1) {
+				while (this.options.maxPoints <= this._markers.length)
+					this.deleteLastVertex();
+
 				this.addVertex(e.latlng);
-				this._finishShape();
-			} else if (lastPtDistance < 10 && L.Browser.touch) {
-				this._finishShape();
+
+				if (this._clickHandled)
+					this._finishShape();
 			} else if (Math.abs(dragCheckDistance) < 9 * (window.devicePixelRatio || 1)) {
 				this.addVertex(e.latlng);
 			}
